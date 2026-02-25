@@ -1,4 +1,8 @@
+use std::process::Command;
+
 use eframe::egui;
+mod indexer; 
+use indexer::{get_installed_apps, AppInfo};
 
 const WINDOW_WIDTH: f32 = 400.0;
 const WINDOW_HEIGHT: f32 = 400.0;
@@ -23,7 +27,7 @@ fn main() -> eframe::Result {
 
 pub struct FerroApp {
     search_query: String,
-    all_apps: Vec<String>,
+    all_apps: Vec<AppInfo>,
     selected_index: usize,
     centered: bool,
 }
@@ -32,21 +36,7 @@ impl Default for FerroApp {
     fn default() -> Self {
         Self {
             search_query: String::new(),
-            all_apps: vec![
-                "Calculator".to_string(),
-                "Chrome".to_string(),
-                "Firefox".to_string(),
-                "Notepad".to_string(),
-                "Spotify".to_string(),
-                "Steam".to_string(),
-                "Terminal".to_string(),
-                "VS Code".to_string(),
-                "Visual Studio".to_string(),
-                "VLC Media Player".to_string(),
-                "Word".to_string(),
-                "Xbox".to_string(),
-                "Zoom".to_string(),
-            ],
+            all_apps: get_installed_apps(),
             selected_index: 0,
             centered: false,
         }
@@ -70,9 +60,9 @@ impl eframe::App for FerroApp {
         }
 
         // filter apps
-        let filtered_apps: Vec<String> = self.all_apps
+        let filtered_apps: Vec<AppInfo> = self.all_apps
             .iter()
-            .filter(|app| app.to_lowercase().contains(&self.search_query.to_lowercase()))
+            .filter(|app| app.name.to_lowercase().contains(&self.search_query.to_lowercase()))
             .cloned()
             .collect();
 
@@ -110,7 +100,14 @@ impl eframe::App for FerroApp {
 
         if enter_pressed {
             if let Some(app) = filtered_apps.get(self.selected_index) {
-                println!("run {app}");
+                println!("Running: {}", app.name);
+                
+                // empty "" is needed for titles that have spaces
+                let _ = Command::new("cmd")
+                    .args(["/C", "start", "", app.path.to_str().unwrap()])
+                    .spawn();
+
+                std::process::exit(0);
             }
         }
 
@@ -145,7 +142,7 @@ impl eframe::App for FerroApp {
                             .fill(bg_color)
                             .inner_margin(8.0)
                             .show(ui, |ui| {
-                                ui.add_sized([ui.available_width(), 20.0], egui::Label::new(app));
+                                ui.add_sized([ui.available_width(), 20.0], egui::Label::new(&app.name));
                             })
                             .response;
 
